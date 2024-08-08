@@ -23,8 +23,8 @@ Office365-REST-Python-Client<2.4.3
 # https://github.com/Unstructured-IO/unstructured/issues/1458
 # unstructured-inference
 # use the known compatible version of weaviate and unstructured.pytesseract
-unstructured.pytesseract>=0.3.12
-weaviate-client>3.25.0
+# unstructured.pytesseract>=0.3.12
+# weaviate-client>3.25.0
 # Note(yuming) - pining to avoid conflict with paddle install
 matplotlib==3.7.2
 # langchain limits anyio to below 4.0
@@ -32,10 +32,10 @@ anyio<4.0
 # NOTE(crag): earlier versions fail in compilation step when pip installing the package
 pycocotools>=2.0.7
 # NOTE(crag): python3.8-python3.11 compat (if it ends up being required)
-torch>2
+# torch>2
 # pinned in unstructured paddleocr
-opencv-python==4.8.0.76
-opencv-contrib-python==4.8.0.76
+# opencv-python==4.8.0.76
+# opencv-contrib-python==4.8.0.76
 platformdirs==3.10.0
 
 # TODO: Constraint due to langchain, remove when that gets updated:

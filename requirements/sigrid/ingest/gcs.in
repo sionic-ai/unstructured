@@ -1,0 +1,5 @@
+-c ../deps/constraints.txt
+-c ../base.txt
+gcsfs
+fsspec
+bs4
