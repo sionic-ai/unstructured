@@ -37,3 +37,12 @@ lint.ignore = [
     "PT012",    # -- pytest.raises() block should contain a single simple statement --
     "SIM117",   # -- merge `with` statements for context managers that have same scope --
 ]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = { version = "=1.90+cu111", source = "pytorch" }
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu111/"
+secondary = true
