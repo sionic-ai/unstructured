@@ -78,8 +78,8 @@ all_doc_reqs = list(
 
 
 setup(
-    name="unstructured",
-    description="A library that prepares raw documents for downstream ML tasks.",
+    name="unstructured-cpu",
+    description="No more headache on cuda for unstructured",
     long_description=open("README.md", encoding="utf-8").read(),  # noqa: SIM115
     long_description_content_type="text/markdown",
     keywords="NLP PDF HTML CV XML parsing preprocessing",
