@@ -1,7 +1,0 @@
--c ./deps/constraints.txt
--c base.txt
-
-pdfminer.six
-pikepdf
-pillow_heif
-pypdf

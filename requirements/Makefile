@@ -8,6 +8,7 @@ INGEST_REQUIREMENTSTXT := $(patsubst %.in,%.txt,$(INGEST_REQUIREMENTS))
 
 
 .PHONY: all
+# pip install pip-tools
 all: compile-all-base compile-ingest
 
 .PHONY: compile-test
