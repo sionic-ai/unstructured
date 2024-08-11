@@ -31,57 +31,7 @@ def determine_pdf_or_image_strategy(
 ):
     """Determines what strategy to use for processing PDFs or images, accounting for fallback
     logic if some dependencies are not available."""
-    pytesseract_installed = dependency_exists("pytesseract")
-    unstructured_inference_installed = dependency_exists("unstructured_inference")
-
-    if strategy == PartitionStrategy.AUTO:
-        extract_element = extract_images_in_pdf or bool(extract_image_block_types)
-        if is_image:
-            strategy = _determine_image_auto_strategy()
-        else:
-            strategy = _determine_pdf_auto_strategy(
-                pdf_text_extractable=pdf_text_extractable,
-                infer_table_structure=infer_table_structure,
-                extract_element=extract_element,
-            )
-
-    if all(
-        [not unstructured_inference_installed, not pytesseract_installed, not pdf_text_extractable],
-    ):
-        raise ValueError(
-            "unstructured_inference is not installed, pytesseract is not installed "
-            "and the text of the PDF is not extractable. "
-            "To process this file, install unstructured_inference, install pytesseract, "
-            "or remove copy protection from the PDF.",
-        )
-
-    if strategy == PartitionStrategy.HI_RES and not unstructured_inference_installed:
-        logger.warning(
-            "unstructured_inference is not installed. Cannot use the hi_res partitioning "
-            "strategy. Falling back to partitioning with another strategy.",
-        )
-        # NOTE(robinson) - fallback to ocr_only if possible because it is the most
-        # similar to hi_res
-        if pytesseract_installed:
-            logger.warning("Falling back to partitioning with ocr_only.")
-            return PartitionStrategy.OCR_ONLY
-        else:
-            logger.warning("Falling back to partitioning with fast.")
-            return PartitionStrategy.FAST
-
-    elif strategy == PartitionStrategy.OCR_ONLY and not pytesseract_installed:
-        logger.warning(
-            "pytesseract is not installed. Cannot use the ocr_only partitioning "
-            "strategy. Falling back to partitioning with another strategy.",
-        )
-        if pdf_text_extractable:
-            logger.warning("Falling back to partitioning with fast.")
-            return PartitionStrategy.FAST
-        else:
-            logger.warning("Falling back to partitioning with hi_res.")
-            return PartitionStrategy.HI_RES
-
-    return strategy
+    return PartitionStrategy.FAST
 
 
 def _determine_image_auto_strategy():
