@@ -1,28 +1,72 @@
-FROM quay.io/unstructured-io/base-images:wolfi-base-e48da6b@sha256:8ad3479e5dc87a86e4794350cca6385c01c6d110902c5b292d1a62e231be711b as base
+FROM ubuntu:22.04 AS base
 
-USER root
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    gnupg \
+    ca-certificates \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# GPG 키를 수동으로 추가
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F23C5A6CF475977595C89F51BA6932366A755776
+
+# PPA 추가 및 Python 3.11 설치
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-distutils \
+    fonts-ubuntu \
+    fontconfig \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 3.11을 기본 Python으로 설정
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --set python3 /usr/bin/python3.11
+
+# pip 설치
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python3 get-pip.py && \
+    rm get-pip.py
+
+# 나머지 Dockerfile 내용은 그대로 유지
 WORKDIR /app
 
 COPY ./requirements requirements/
 COPY unstructured unstructured
-COPY test_unstructured test_unstructured
+# COPY test_unstructured test_unstructured
 COPY example-docs example-docs
 
-RUN chown -R notebook-user:notebook-user /app && \
-  apk add font-ubuntu && \
-  fc-cache -fv && \
-  ln -s /usr/bin/python3.11 /usr/bin/python3
+RUN fc-cache -fv
 
-USER notebook-user
+# 먼저 모든 requirements 설치
+RUN find requirements/ -type f -name "*.txt" -exec pip install --no-cache-dir -r '{}' ';' && \
+    pip install --no-cache-dir unstructured.paddlepaddle
 
-RUN find requirements/ -type f -name "*.txt" -exec pip3.11 install --no-cache-dir --user -r '{}' ';' && \
-  pip3.11 install unstructured.paddlepaddle && \
-  python3.11 -c "from unstructured.nlp.tokenize import download_nltk_packages; download_nltk_packages()" && \
-  python3.11 -c "from unstructured.partition.model_init import initialize; initialize()" && \
-  python3.11 -c "from unstructured_inference.models.tables import UnstructuredTableTransformerModel; model = UnstructuredTableTransformerModel(); model.initialize('microsoft/table-transformer-structure-recognition')"
+# NVIDIA 관련 패키지 제거 및 CPU 전용 패키지 설치
+RUN pip uninstall -y torch torchvision torchaudio && \
+    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-ENV PATH="${PATH}:/home/notebook-user/.local/bin"
+# 초기화 및 모델 다운로드
+RUN python3 -c "from unstructured.nlp.tokenize import download_nltk_packages; download_nltk_packages()" && \
+    python3 -c "from unstructured.partition.model_init import initialize; initialize()" && \
+    python3 -c "from unstructured_inference.models.tables import UnstructuredTableTransformerModel; model = UnstructuredTableTransformerModel(); model.initialize('microsoft/table-transformer-structure-recognition')"
+
+# NVIDIA 관련 파일 및 디렉토리 제거
+RUN rm -rf /usr/local/cuda* /usr/local/nvidia* && \
+    find / -name "*nvidia*" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find / -name "*cuda*" -type d -exec rm -rf {} + 2>/dev/null || true
+
+ENV PATH="${PATH}:/root/.local/bin"
 ENV TESSDATA_PREFIX=/usr/local/share/tessdata
+
+RUN if [ -d "/usr/local/share/tessdata" ]; then rm -rf /usr/local/share/tessdata; fi
 
 CMD ["/bin/bash"]
