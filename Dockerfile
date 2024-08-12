@@ -45,12 +45,13 @@ RUN python3 -c "from unstructured.nlp.tokenize import download_nltk_packages; do
     && if [ -d "/usr/local/share/tessdata" ]; then rm -rf /usr/local/share/tessdata; fi
 
 # 실행 스테이지
-FROM ubuntu:22.04-minimal AS runtime
+FROM ubuntu:22.04 AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/root/.local/bin:$PATH" \
-    TESSDATA_PREFIX=/usr/local/share/tessdata
+    TESSDATA_PREFIX=/usr/local/share/tessdata \
+    DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
