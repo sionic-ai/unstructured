@@ -37,7 +37,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python3 get-pip.py && \
     rm get-pip.py
 
-WORKDIR /app
+WORKDIR /
 
 COPY ./requirements requirements/
 COPY unstructured unstructured
