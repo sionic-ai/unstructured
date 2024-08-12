@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/root/.local/bin:$PATH" \
+    PATH="/usr/local/bin:$PATH" \
     TESSDATA_PREFIX=/usr/local/share/tessdata
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-venv \
     python3.11-distutils \
+    python3-pip \
     fonts-ubuntu \
     fontconfig \
     && add-apt-repository ppa:deadsnakes/ppa \
@@ -26,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && update-alternatives --set python3 /usr/bin/python3.11 \
-    && curl https://bootstrap.pypa.io/get-pip.py | python3 \
+    && python3 -m pip install --upgrade pip \
     && fc-cache -fv
 
 WORKDIR /app
@@ -34,10 +35,10 @@ WORKDIR /app
 COPY ./requirements ./requirements
 COPY unstructured ./unstructured
 
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
     && find requirements/ -type f -name "*.txt" -exec pip install --no-cache-dir -r '{}' ';' \
-    && pip install --no-cache-dir unstructured.paddlepaddle \
-    && pip cache purge
+    && python3 -m pip install --no-cache-dir unstructured.paddlepaddle \
+    && python3 -m pip cache purge
 
 RUN python3 -c "from unstructured.nlp.tokenize import download_nltk_packages; download_nltk_packages()" \
     && python3 -c "from unstructured.partition.model_init import initialize; initialize()" \
@@ -49,13 +50,14 @@ FROM ubuntu:22.04 AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/root/.local/bin:$PATH" \
+    PATH="/usr/local/bin:$PATH" \
     TESSDATA_PREFIX=/usr/local/share/tessdata \
     DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-venv \
+    python3-pip \
     libgl1-mesa-glx \
     libglib2.0-0 \
     fonts-ubuntu \
@@ -66,8 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /usr/local/lib/python3.11/dist-packages /usr/local/lib/python3.11/dist-packages
 COPY --from=builder /app /app
 
 CMD ["python3"]
