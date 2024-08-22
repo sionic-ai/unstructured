@@ -37,3 +37,8 @@ lint.ignore = [
     "PT012",    # -- pytest.raises() block should contain a single simple statement --
     "SIM117",   # -- merge `with` statements for context managers that have same scope --
 ]
+
+[tool.poetry.dependencies]
+torch = {url = "https://download.pytorch.org/whl/cu121/torch-2.2.1%2Bcu121-cp311-cp311-win_amd64.whl"}
+torchaudio = {url = "https://download.pytorch.org/whl/cu121/torchaudio-2.2.1%2Bcu121-cp311-cp311-win_amd64.whl"}
+torchvision = {url = "https://download.pytorch.org/whl/cu121/torchvision-0.17.1%2Bcu121-cp311-cp311-win_amd64.whl"}

@@ -1,28 +1,74 @@
-FROM quay.io/unstructured-io/base-images:wolfi-base-e48da6b@sha256:8ad3479e5dc87a86e4794350cca6385c01c6d110902c5b292d1a62e231be711b as base
+# 빌더 스테이지
+FROM ubuntu:22.04 AS builder
 
-USER root
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/usr/local/bin:$PATH" \
+    TESSDATA_PREFIX=/usr/local/share/tessdata
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    gnupg \
+    ca-certificates \
+    curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    python3.11 \
+    python3.11-venv \
+    python3.11-distutils \
+    python3-pip \
+    fonts-ubuntu \
+    fontconfig \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --set python3 /usr/bin/python3.11 \
+    && python3 -m pip install --upgrade pip \
+    && fc-cache -fv
 
 WORKDIR /app
 
-COPY ./requirements requirements/
-COPY unstructured unstructured
-COPY test_unstructured test_unstructured
-COPY example-docs example-docs
+COPY ./requirements ./requirements
+COPY unstructured ./unstructured
 
-RUN chown -R notebook-user:notebook-user /app && \
-  apk add font-ubuntu && \
-  fc-cache -fv && \
-  ln -s /usr/bin/python3.11 /usr/bin/python3
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+    && find requirements/ -type f -name "*.txt" -exec pip install --no-cache-dir -r '{}' ';' \
+    && python3 -m pip install --no-cache-dir unstructured.paddlepaddle \
+    && python3 -m pip cache purge
 
-USER notebook-user
+RUN python3 -c "from unstructured.nlp.tokenize import download_nltk_packages; download_nltk_packages()" \
+    && python3 -c "from unstructured.partition.model_init import initialize; initialize()" \
+    && python3 -c "from unstructured_inference.models.tables import UnstructuredTableTransformerModel; model = UnstructuredTableTransformerModel(); model.initialize('microsoft/table-transformer-structure-recognition')" \
+    && if [ -d "/usr/local/share/tessdata" ]; then rm -rf /usr/local/share/tessdata; fi
 
-RUN find requirements/ -type f -name "*.txt" -exec pip3.11 install --no-cache-dir --user -r '{}' ';' && \
-  pip3.11 install unstructured.paddlepaddle && \
-  python3.11 -c "from unstructured.nlp.tokenize import download_nltk_packages; download_nltk_packages()" && \
-  python3.11 -c "from unstructured.partition.model_init import initialize; initialize()" && \
-  python3.11 -c "from unstructured_inference.models.tables import UnstructuredTableTransformerModel; model = UnstructuredTableTransformerModel(); model.initialize('microsoft/table-transformer-structure-recognition')"
+# 실행 스테이지
+FROM ubuntu:22.04 AS runtime
 
-ENV PATH="${PATH}:/home/notebook-user/.local/bin"
-ENV TESSDATA_PREFIX=/usr/local/share/tessdata
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/usr/local/bin:$PATH" \
+    TESSDATA_PREFIX=/usr/local/share/tessdata \
+    DEBIAN_FRONTEND=noninteractive
 
-CMD ["/bin/bash"]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3-pip \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    fonts-ubuntu \
+    fontconfig \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
+
+WORKDIR /
+
+COPY --from=builder /usr/local/lib/python3.11/dist-packages /usr/local/lib/python3.11/dist-packages
+COPY --from=builder /app /app
+
+CMD ["python3"]
